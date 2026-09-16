@@ -3,7 +3,7 @@ import { CheckSquare, MessageSquare, Paperclip, Clock } from "lucide-react";
 import { useTheme } from "../../hooks/useTheme";
 import { useTasksStore } from "../../hooks/useTasksStore";
 import { useMasterData } from "../../hooks/useMasterData";
-import { memberById, fmtDate, daysUntil } from "../../data/mockData";
+import { membersByIds, fmtDate, daysUntil } from "../../data/mockData";
 import { BRAND } from "../../theme";
 import Card from "../common/Card";
 import Badge from "../common/Badge";
@@ -13,7 +13,7 @@ export default function KanbanTaskCard({ task }) {
   const { c } = useTheme();
   const { teamMembers } = useTasksStore();
   const { priorityColor, labelColor } = useMasterData();
-  const m = memberById(teamMembers, task.assignee);
+  const assigneeMembers = membersByIds(teamMembers, task.assignees);
   const checkedCount = task.checklist.filter((x) => x.done).length;
   const overdue = daysUntil(task.dueDate) < 0 && task.status !== "done";
 
@@ -51,7 +51,12 @@ export default function KanbanTaskCard({ task }) {
             </span>
           )}
         </div>
-        <Avatar initials={m.initials} size={24} />
+        <div className="flex -space-x-2 shrink-0">
+          {assigneeMembers.slice(0, 3).map((mm, idx) => (
+            <Avatar key={idx} initials={mm.initials} size={24} />
+          ))}
+          {assigneeMembers.length === 0 && <Avatar initials="?" size={24} />}
+        </div>
       </div>
       <div className="flex items-center gap-1 mt-2 text-[10.5px]" style={{ color: overdue ? BRAND.danger : c.muted }}>
         <Clock size={11} /> {fmtDate(task.dueDate)}

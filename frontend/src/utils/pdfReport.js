@@ -1,6 +1,6 @@
 import jsPDF from "jspdf";
 import autoTable from "jspdf-autotable";
-import { fmtDate, memberById } from "../data/mockData";
+import { fmtDate, membersByIds } from "../data/mockData";
 
 const PRIMARY = [115, 103, 240]; // #7367F0 as RGB for jsPDF
 
@@ -139,7 +139,7 @@ export function generateReportPDF({ scopeLabel, tasks, projects, teamMembers, by
     .sort((a, b) => (a.status === "done") - (b.status === "done") || new Date(a.dueDate || 0) - new Date(b.dueDate || 0))
     .map((t) => {
       const project = projects.find((p) => p.id === t.projectId);
-      const assignee = memberById(teamMembers, t.assignee);
+      const assignees = membersByIds(teamMembers, t.assignees).map((m) => m.name).join(" & ") || "Unassigned";
       const checklistPct = t.checklist.length
         ? `${Math.round((t.checklist.filter((c) => c.done).length / t.checklist.length) * 100)}%`
         : "-";
@@ -148,7 +148,7 @@ export function generateReportPDF({ scopeLabel, tasks, projects, teamMembers, by
         project?.name || "-",
         taskStatusLabel(t.status),
         t.priority,
-        assignee.name,
+        assignees,
         t.dueDate ? fmtDate(t.dueDate) : "-",
         checklistPct,
       ];

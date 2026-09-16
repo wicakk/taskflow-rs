@@ -16,7 +16,7 @@ class TaskResource extends JsonResource
             'description' => $this->description,
             'status' => $this->status,
             'priority' => $this->priority,
-            'assignee' => $this->assignee_id,
+            'assignees' => $this->whenLoaded('assignees', fn () => $this->assignees->pluck('id')),
             'dueDate' => optional($this->due_date)->toDateString(),
             'comments' => $this->comments_count,
             'attachments' => $this->attachments_count,

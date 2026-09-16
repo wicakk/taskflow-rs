@@ -49,6 +49,7 @@ export function TasksProvider({ children }) {
       id: newId("t"),
       status: "todo",
       priority: "Medium",
+      assignees: [],
       labels: [],
       checklist: [],
       comments: 0,

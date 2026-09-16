@@ -19,7 +19,7 @@ export default function MyTasks() {
   const [filter, setFilter] = useState("All");
   const [modalOpen, setModalOpen] = useState(false);
 
-  const mine = tasks.filter((t) => t.assignee === user?.id);
+  const mine = tasks.filter((t) => t.assignees?.includes(user?.id));
   const filters = {
     All: mine,
     Today: mine.filter((t) => daysUntil(t.dueDate) === 0),

@@ -2,7 +2,7 @@ import React from "react";
 import { useTheme } from "../../hooks/useTheme";
 import { useTasksStore } from "../../hooks/useTasksStore";
 import { useMasterData } from "../../hooks/useMasterData";
-import { memberById, fmtDate } from "../../data/mockData";
+import { membersByIds, fmtDate } from "../../data/mockData";
 import Card from "../common/Card";
 import Badge from "../common/Badge";
 import Avatar from "../common/Avatar";
@@ -25,7 +25,7 @@ export default function TaskListTable({ tasks, openTask }) {
         </thead>
         <tbody>
           {tasks.map((t) => {
-            const m = memberById(teamMembers, t.assignee);
+            const assigneeMembers = membersByIds(teamMembers, t.assignees);
             return (
               <tr
                 key={t.id}
@@ -39,9 +39,11 @@ export default function TaskListTable({ tasks, openTask }) {
                 <td className="px-4 py-3"><Badge color={taskStatusColor(t.status)}>{taskStatusLabel(t.status)}</Badge></td>
                 <td className="px-4 py-3"><Badge color={priorityColor(t.priority)}>{t.priority}</Badge></td>
                 <td className="px-4 py-3">
-                  <div className="flex items-center gap-2">
-                    <Avatar initials={m.initials} size={22} />
-                    <span style={{ color: c.text }}>{m.name}</span>
+                  <div className="flex items-center -space-x-2">
+                    {assigneeMembers.slice(0, 3).map((mm, idx) => (
+                      <Avatar key={idx} initials={mm.initials} size={22} />
+                    ))}
+                    {assigneeMembers.length === 0 && <span style={{ color: c.muted }} className="text-[12px]">Unassigned</span>}
                   </div>
                 </td>
                 <td className="px-4 py-3" style={{ color: c.text }}>{fmtDate(t.dueDate)}</td>

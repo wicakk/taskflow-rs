@@ -10,7 +10,7 @@ import {
 import { useTheme } from "../hooks/useTheme";
 import { useTasksStore } from "../hooks/useTasksStore";
 import { useMasterData } from "../hooks/useMasterData";
-import { daysUntil, fmtDate, memberById } from "../data/mockData";
+import { daysUntil, fmtDate, membersByIds } from "../data/mockData";
 import { BRAND } from "../theme";
 import { buildSCurve, statusBreakdown, priorityBreakdown, exportTasksCSV } from "../utils/reportUtils";
 import { generateReportPDF } from "../utils/pdfReport";
@@ -254,7 +254,7 @@ export default function Reports() {
           <tbody>
             {taskRows.map((t) => {
               const project = projects.find((p) => p.id === t.projectId);
-              const assignee = memberById(teamMembers, t.assignee);
+              const assigneeMembers = membersByIds(teamMembers, t.assignees);
               const checklistDone = t.checklist.filter((x) => x.done).length;
               const checklistPct = t.checklist.length ? Math.round((checklistDone / t.checklist.length) * 100) : null;
               return (
@@ -267,9 +267,11 @@ export default function Reports() {
                   <td className="px-4 py-3"><Badge color={taskStatusColor(t.status)}>{taskStatusLabel(t.status)}</Badge></td>
                   <td className="px-4 py-3"><Badge color={priorityColor(t.priority)}>{t.priority}</Badge></td>
                   <td className="px-4 py-3">
-                    <div className="flex items-center gap-2">
-                      <Avatar initials={assignee.initials} size={22} />
-                      <span style={{ color: c.text }}>{assignee.name}</span>
+                    <div className="flex items-center -space-x-2">
+                      {assigneeMembers.slice(0, 3).map((mm, idx) => (
+                        <Avatar key={idx} initials={mm.initials} size={22} />
+                      ))}
+                      {assigneeMembers.length === 0 && <span style={{ color: c.muted }} className="text-[12px]">Unassigned</span>}
                     </div>
                   </td>
                   <td className="px-4 py-3" style={{ color: c.text }}>{t.dueDate ? fmtDate(t.dueDate) : "-"}</td>

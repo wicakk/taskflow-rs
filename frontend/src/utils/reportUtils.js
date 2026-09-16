@@ -1,4 +1,4 @@
-import { TODAY, fmtDate, memberById } from "../data/mockData";
+import { TODAY, fmtDate, membersByIds } from "../data/mockData";
 
 const DAY_MS = 86400000;
 
@@ -57,9 +57,9 @@ export function exportTasksCSV(tasks, projects, teamMembers, taskStatusLabel, fi
   const headers = ["Task", "Project", "Status", "Priority", "Assignee", "Due Date", "Checklist Progress"];
   const rows = tasks.map((t) => {
     const project = projects.find((p) => p.id === t.projectId);
-    const assignee = memberById(teamMembers, t.assignee);
+    const assignees = membersByIds(teamMembers, t.assignees).map((m) => m.name).join(" & ") || "Unassigned";
     const checklist = t.checklist.length ? `${t.checklist.filter((c) => c.done).length}/${t.checklist.length}` : "-";
-    return [t.title, project?.name || "-", taskStatusLabel(t.status), t.priority, assignee.name, t.dueDate ? fmtDate(t.dueDate) : "-", checklist];
+    return [t.title, project?.name || "-", taskStatusLabel(t.status), t.priority, assignees, t.dueDate ? fmtDate(t.dueDate) : "-", checklist];
   });
 
   const csv = [headers, ...rows].map((row) => row.map(csvEscape).join(",")).join("\n");

@@ -14,7 +14,7 @@ class Task extends Model
 
     protected $fillable = [
         'project_id', 'title', 'description', 'status', 'priority',
-        'assignee_id', 'due_date', 'comments_count', 'attachments_count',
+        'due_date', 'comments_count', 'attachments_count',
     ];
 
     protected function casts(): array
@@ -29,9 +29,10 @@ class Task extends Model
         return $this->belongsTo(Project::class);
     }
 
-    public function assignee(): BelongsTo
+    /** A task can have multiple assignees. */
+    public function assignees(): BelongsToMany
     {
-        return $this->belongsTo(User::class, 'assignee_id');
+        return $this->belongsToMany(User::class, 'task_user');
     }
 
     public function checklistItems(): HasMany

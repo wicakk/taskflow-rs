@@ -113,7 +113,7 @@ Semua endpoint (kecuali `/login`) butuh header `Authorization: Bearer {token}`.
 |---|---|---|---|
 | GET | `/api/tasks?project_id=&assignee_id=` | — | Filter opsional |
 | GET | `/api/tasks/{id}` | — | Detail + labels + checklist |
-| POST | `/api/tasks` | `task:create` | Body: projectId, title, description, status, priority, assignee, dueDate, labels[] |
+| POST | `/api/tasks` | `task:create` | Body: projectId, title, description, status, priority, assignees[] (array of user id), dueDate, labels[] |
 | PUT | `/api/tasks/{id}` | `task:edit` (atau `task:move` kalau body cuma `{status}`) | Partial update |
 | DELETE | `/api/tasks/{id}` | `task:delete` | |
 | POST | `/api/tasks/{id}/checklist` | `task:edit` | `{ text }` |

@@ -7,6 +7,7 @@ import { useTasksStore } from "../hooks/useTasksStore";
 import { fmtDate, daysUntil, timeAgo } from "../data/mockData";
 import { BRAND, projectColors } from "../theme";
 import { useMasterData } from "../hooks/useMasterData";
+import { computeMemberTaskStats, resolveDoneKey } from "../utils/memberStats";
 import Card from "../components/common/Card";
 import Badge from "../components/common/Badge";
 import ProgressBar from "../components/common/ProgressBar";
@@ -18,11 +19,12 @@ export default function Dashboard() {
   const { user } = useAuth();
   const { tasks, projects, teamMembers, openTask, announcements } = useTasksStore();
   const { taskStatuses, priorityColor, taskStatusColor } = useMasterData();
+  const doneKey = resolveDoneKey(taskStatuses);
   const navigate = useNavigate();
 
   const latestAnnouncement = announcements[0];
 
-  const myTasks = tasks.filter((t) => t.assignee === user?.id);
+  const myTasks = tasks.filter((t) => t.assignees?.includes(user?.id));
   const firstName = user?.name?.split(" ")[0] || "there";
   const stats = [
     { label: "Total Projects", value: projects.length, icon: FolderKanban, color: BRAND.primary },
@@ -163,15 +165,18 @@ export default function Dashboard() {
         <Card className="p-5">
           <h3 className="font-semibold text-[15px] mb-4" style={{ color: c.textStrong }}>Team Activity</h3>
           <div className="space-y-3.5">
-            {teamMembers.slice(0, 4).map((m) => (
-              <div key={m.id} className="flex items-center gap-2.5">
-                <Avatar initials={m.initials} size={28} online={m.online} />
-                <div className="min-w-0 flex-1">
-                  <div className="text-[12.5px] font-medium truncate" style={{ color: c.text }}>{m.name}</div>
-                  <div className="text-[11px]" style={{ color: c.muted }}>{m.activeTasks} active tasks</div>
+            {teamMembers.slice(0, 4).map((m) => {
+              const { activeTasks } = computeMemberTaskStats(tasks, m.id, doneKey);
+              return (
+                <div key={m.id} className="flex items-center gap-2.5">
+                  <Avatar initials={m.initials} size={28} online={m.online} />
+                  <div className="min-w-0 flex-1">
+                    <div className="text-[12.5px] font-medium truncate" style={{ color: c.text }}>{m.name}</div>
+                    <div className="text-[11px]" style={{ color: c.muted }}>{activeTasks} active tasks</div>
+                  </div>
                 </div>
-              </div>
-            ))}
+              );
+            })}
           </div>
         </Card>
       </div>

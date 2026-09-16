@@ -73,7 +73,7 @@ berbeda dari yang di atas.
 - Project Detail — tab Board / List / Timeline / **Chat** / Calendar / Files / Activity, Kanban board drag & drop, tombol **Add Task** per kolom
 - **Group Chat per Project** — tab "Chat" di setiap project, kirim & hapus pesan sendiri, badge jumlah pesan di tab
 - **Announcements** — papan pengumuman untuk seluruh tim (menu tersendiri di sidebar), semua role bisa posting, pin ke atas (Admin/Manager), hapus milik sendiri atau siapa saja (Admin), muncul juga sebagai banner di Dashboard
-- Task Detail drawer — **edit inline** (judul, deskripsi, priority, assignee, due date, label), **tambah/hapus checklist item**, **hapus task**, ubah status
+- Task Detail drawer — **edit inline** (judul, deskripsi, priority, **multi-assignee**, due date, label), **tambah/hapus checklist item**, **hapus task**, ubah status
 - My Tasks — filter All / Today / Upcoming / Overdue / Completed, berdasarkan user yang sedang login, plus **tombol New Task** (langsung pilih project)
 - **Reports** — filter per project / semua project, **Kurva S** (planned vs actual progress berdasarkan due date, pakai Recharts), grafik + **persentase breakdown** task by status & by priority, **tabel rincian setiap task** (status, progress checklist per task), **Export CSV** dan **Export PDF** (laporan siap cetak lengkap dengan ringkasan, breakdown %, dan daftar task)
 - **Master Data** (khusus Admin) — kelola data acuan yang dipakai di seluruh aplikasi, dengan sub-menu:

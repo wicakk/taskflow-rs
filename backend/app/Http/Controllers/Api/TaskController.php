@@ -12,13 +12,13 @@ class TaskController extends Controller
 {
     public function index(Request $request)
     {
-        $query = Task::with(['labels', 'checklistItems']);
+        $query = Task::with(['labels', 'checklistItems', 'assignees']);
 
         if ($request->filled('project_id')) {
             $query->where('project_id', $request->input('project_id'));
         }
         if ($request->filled('assignee_id')) {
-            $query->where('assignee_id', $request->input('assignee_id'));
+            $query->whereHas('assignees', fn ($q) => $q->where('users.id', $request->input('assignee_id')));
         }
 
         return TaskResource::collection($query->latest()->get());
@@ -26,7 +26,7 @@ class TaskController extends Controller
 
     public function show(Task $task)
     {
-        return new TaskResource($task->load(['labels', 'checklistItems']));
+        return new TaskResource($task->load(['labels', 'checklistItems', 'assignees']));
     }
 
     public function store(Request $request)
@@ -39,7 +39,8 @@ class TaskController extends Controller
             'description' => ['nullable', 'string'],
             'status' => ['required', 'string'],
             'priority' => ['required', 'string'],
-            'assignee' => ['nullable', 'exists:users,id'],
+            'assignees' => ['array'],
+            'assignees.*' => ['exists:users,id'],
             'dueDate' => ['nullable', 'date'],
             'labels' => ['array'],
             'labels.*' => ['string'],
@@ -51,13 +52,13 @@ class TaskController extends Controller
             'description' => $data['description'] ?? null,
             'status' => $data['status'],
             'priority' => $data['priority'],
-            'assignee_id' => $data['assignee'] ?? null,
             'due_date' => $data['dueDate'] ?? null,
         ]);
 
+        $task->assignees()->sync($data['assignees'] ?? []);
         $this->syncLabels($task, $data['labels'] ?? []);
 
-        return new TaskResource($task->load(['labels', 'checklistItems']));
+        return new TaskResource($task->load(['labels', 'checklistItems', 'assignees']));
     }
 
     public function update(Request $request, Task $task)
@@ -71,22 +72,25 @@ class TaskController extends Controller
             'description' => ['sometimes', 'nullable', 'string'],
             'status' => ['sometimes', 'string'],
             'priority' => ['sometimes', 'string'],
-            'assignee' => ['sometimes', 'nullable', 'exists:users,id'],
+            'assignees' => ['sometimes', 'array'],
+            'assignees.*' => ['exists:users,id'],
             'dueDate' => ['sometimes', 'nullable', 'date'],
             'labels' => ['sometimes', 'array'],
             'labels.*' => ['string'],
         ]);
 
         $mapped = collect($data)->only(['title', 'description', 'status', 'priority'])->toArray();
-        if (array_key_exists('assignee', $data)) $mapped['assignee_id'] = $data['assignee'];
         if (array_key_exists('dueDate', $data)) $mapped['due_date'] = $data['dueDate'];
         $task->update($mapped);
 
+        if (array_key_exists('assignees', $data)) {
+            $task->assignees()->sync($data['assignees']);
+        }
         if (array_key_exists('labels', $data)) {
             $this->syncLabels($task, $data['labels']);
         }
 
-        return new TaskResource($task->load(['labels', 'checklistItems']));
+        return new TaskResource($task->load(['labels', 'checklistItems', 'assignees']));
     }
 
     public function destroy(Request $request, Task $task)

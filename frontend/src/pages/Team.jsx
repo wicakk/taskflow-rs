@@ -3,6 +3,8 @@ import { UserPlus } from "lucide-react";
 import { useTheme } from "../hooks/useTheme";
 import { useAuth } from "../hooks/useAuth";
 import { useTasksStore } from "../hooks/useTasksStore";
+import { useMasterData } from "../hooks/useMasterData";
+import { computeMemberTaskStats, resolveDoneKey } from "../utils/memberStats";
 import Card from "../components/common/Card";
 import Button from "../components/common/Button";
 import ConfirmDialog from "../components/common/ConfirmDialog";
@@ -12,7 +14,9 @@ import MemberFormModal from "../components/team/MemberFormModal";
 export default function Team() {
   const { c } = useTheme();
   const { user, can } = useAuth();
-  const { teamMembers, deleteMember } = useTasksStore();
+  const { teamMembers, tasks, deleteMember } = useTasksStore();
+  const { taskStatuses } = useMasterData();
+  const doneKey = resolveDoneKey(taskStatuses);
   const [modalOpen, setModalOpen] = useState(false);
   const [editingMember, setEditingMember] = useState(null);
   const [deleteTarget, setDeleteTarget] = useState(null);
@@ -52,7 +56,7 @@ export default function Team() {
         {teamMembers.map((m) => (
           <TeamCard
             key={m.id}
-            member={m}
+            member={{ ...m, ...computeMemberTaskStats(tasks, m.id, doneKey) }}
             onEdit={manageTeam ? () => openEdit(m) : undefined}
             onDelete={manageTeam && m.id !== user?.id ? () => setDeleteTarget(m) : undefined}
           />

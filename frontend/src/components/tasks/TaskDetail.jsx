@@ -7,7 +7,7 @@ import { useTheme } from "../../hooks/useTheme";
 import { useAuth } from "../../hooks/useAuth";
 import { useTasksStore } from "../../hooks/useTasksStore";
 import { useMasterData } from "../../hooks/useMasterData";
-import { memberById } from "../../data/mockData";
+import { membersByIds } from "../../data/mockData";
 import Avatar from "../common/Avatar";
 import Badge from "../common/Badge";
 import ProgressBar from "../common/ProgressBar";
@@ -38,7 +38,7 @@ export default function TaskDetail({ task, project, onClose }) {
     return () => cancelAnimationFrame(raf);
   }, []);
 
-  const m = memberById(teamMembers, task.assignee);
+  const assigneeMembers = membersByIds(teamMembers, task.assignees);
   const checkedCount = task.checklist.filter((x) => x.done).length;
   const canEdit = can("task:edit");
   const canDelete = can("task:delete");
@@ -54,13 +54,19 @@ export default function TaskDetail({ task, project, onClose }) {
       labels: f.labels.includes(name) ? f.labels.filter((l) => l !== name) : [...f.labels, name],
     }));
 
+  const toggleFormAssignee = (id) =>
+    setForm((f) => ({
+      ...f,
+      assignees: f.assignees.includes(id) ? f.assignees.filter((a) => a !== id) : [...f.assignees, id],
+    }));
+
   const saveEdit = (e) => {
     e.preventDefault();
     updateTask(task.id, {
       title: form.title,
       description: form.description,
       priority: form.priority,
-      assignee: Number(form.assignee),
+      assignees: form.assignees,
       dueDate: form.dueDate,
       labels: form.labels,
     });
@@ -110,13 +116,33 @@ export default function TaskDetail({ task, project, onClose }) {
                   {priorities.map((p) => <option key={p.id} value={p.name}>{p.name}</option>)}
                 </Select>
               </div>
-              <div>
-                <label className="text-[11px] mb-1.5 block" style={{ color: c.muted }}>Assignee</label>
-                <Select value={form.assignee} onChange={(e) => setForm((f) => ({ ...f, assignee: e.target.value }))}>
-                  {teamMembers.map((mm) => <option key={mm.id} value={mm.id}>{mm.name}</option>)}
-                </Select>
+              <div className="col-span-2">
+                <label className="text-[11px] mb-2 block" style={{ color: c.muted }}>
+                  Assignee{form.assignees.length > 1 ? "s" : ""} <span style={{ opacity: 0.7 }}>(bisa pilih lebih dari satu)</span>
+                </label>
+                <div className="flex flex-wrap gap-2">
+                  {teamMembers.map((mm) => {
+                    const active = form.assignees.includes(mm.id);
+                    return (
+                      <button
+                        type="button"
+                        key={mm.id}
+                        onClick={() => toggleFormAssignee(mm.id)}
+                        className="flex items-center gap-1.5 pl-1 pr-2.5 py-1 rounded-full text-[12px] font-medium"
+                        style={{
+                          border: `1px solid ${active ? "#7367F0" : c.border}`,
+                          background: active ? "#7367F015" : "transparent",
+                          color: active ? "#7367F0" : c.text,
+                        }}
+                      >
+                        <Avatar initials={mm.initials} size={20} />
+                        {mm.name.split(" ")[0]}
+                      </button>
+                    );
+                  })}
+                </div>
               </div>
-              <div>
+              <div className="col-span-2">
                 <label className="text-[11px] mb-1.5 block" style={{ color: c.muted }}>Due date</label>
                 <Input type="date" value={form.dueDate} onChange={(e) => setForm((f) => ({ ...f, dueDate: e.target.value }))} />
               </div>
@@ -170,10 +196,15 @@ export default function TaskDetail({ task, project, onClose }) {
                 <Badge color={priorityColor(task.priority)}>{task.priority}</Badge>
               </div>
               <div>
-                <div className="text-[11px] mb-1.5" style={{ color: c.muted }}>Assignee</div>
-                <div className="flex items-center gap-2">
-                  <Avatar initials={m.initials} size={24} />
-                  <span className="text-[12.5px]" style={{ color: c.text }}>{m.name}</span>
+                <div className="text-[11px] mb-1.5" style={{ color: c.muted }}>Assignee{assigneeMembers.length > 1 ? "s" : ""}</div>
+                <div className="flex flex-wrap items-center gap-2">
+                  {assigneeMembers.map((mm, idx) => (
+                    <div key={idx} className="flex items-center gap-1.5">
+                      <Avatar initials={mm.initials} size={24} />
+                      <span className="text-[12.5px]" style={{ color: c.text }}>{mm.name.split(" ")[0]}</span>
+                    </div>
+                  ))}
+                  {assigneeMembers.length === 0 && <span className="text-[12.5px]" style={{ color: c.muted }}>Unassigned</span>}
                 </div>
               </div>
               <div>

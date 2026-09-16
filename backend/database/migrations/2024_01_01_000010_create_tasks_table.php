@@ -15,7 +15,6 @@ return new class extends Migration
             $table->text('description')->nullable();
             $table->string('status'); // references master_task_statuses.key (not a FK — see note on projects table)
             $table->string('priority');
-            $table->foreignId('assignee_id')->nullable()->constrained('users')->nullOnDelete();
             $table->date('due_date')->nullable();
             $table->unsignedInteger('comments_count')->default(0);
             $table->unsignedInteger('attachments_count')->default(0);
