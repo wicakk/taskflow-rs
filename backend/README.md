@@ -10,7 +10,7 @@ lengkap** (skeleton resmi dari `laravel/laravel`, bukan tempelan file) + kode ap
 > itu bagian yang 100% asli dan terjamin valid. Kode aplikasi di atasnya (folder
 > `app/Models`, `app/Http/Controllers/Api`, `app/Http/Resources`, `app/Support`, migration,
 > seeder, `routes/api.php`) saya tulis manual dan sudah lolos cek sintaks PHP
-> (`php -l`, 0 error). Yang **belum** bisa saya lakukan di sisi saya: menjalankan
+> (`php -l`, 0 error). **Update:** setelah itu backend ini sudah diuji end-to-end di sisi saya (`migrate:fresh --seed` + semua CRUD lewat frontend, memakai SQLite sebagai pengganti MySQL); tetap coba di MySQL kamu. Catatan awal: yang **belum** bisa saya lakukan waktu itu: menjalankan
 > `composer install` sungguhan dan `php artisan migrate --seed` end-to-end, karena
 > environment saya tidak punya akses ke Packagist maupun server MySQL. Jalankan langkah
 > di bawah ini di komputermu untuk verifikasi — kemungkinan besar langsung jalan, tapi
@@ -154,15 +154,12 @@ Semua endpoint (kecuali `/login`) butuh header `Authorization: Bearer {token}`.
 | DELETE | `/api/master-data/{type}/{id}` | `master:manage` | Ditolak (422) kalau masih dipakai |
 | POST | `/api/master-data/{type}/{id}/move` | `master:manage` | `{ direction: -1 \| 1 }` — reorder |
 
-## 6. Menyambungkan ke frontend React
+## 6. Terhubung ke frontend React
 
-Di project React, ganti isi `src/hooks/useTasksStore.jsx` dan `src/hooks/useMasterData.jsx`
-dari `useState(seed) + localStorage` menjadi `fetch()`/`axios` ke endpoint di atas. Resource
-class di backend ini sudah dibuat camelCase dan strukturnya sama persis dengan mock data
-frontend, jadi sebagian besar komponen UI **tidak perlu diubah** — cukup sumber datanya saja
-yang pindah. Simpan `token` hasil login di frontend, kirim sebagai header
-`Authorization: Bearer {token}` di setiap request. Bilang saja kalau mau saya bantu kerjakan
-langkah ini di sesi berikutnya.
+Frontend (`../frontend`) sudah memakai API ini untuk semua CRUD: token dari `POST /api/login`
+disimpan di browser dan dikirim sebagai `Authorization: Bearer {token}` di setiap request.
+Resource class di backend ini mengembalikan camelCase dengan struktur yang sama seperti yang
+dipakai UI, dan responsnya dibungkus `{ "data": ... }` (frontend membukanya di `src/api.js`).
 
 ## 7. Troubleshooting
 

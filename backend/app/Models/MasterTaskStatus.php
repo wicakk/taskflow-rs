@@ -12,7 +12,16 @@ class MasterTaskStatus extends Model
     {
         static::creating(function (self $status) {
             if (empty($status->key)) {
-                $status->key = \Illuminate\Support\Str::slug($status->name, '');
+                // Stable, unique identifier stored on tasks.status. Two stages
+                // with the same name (or a name with no latin letters) must
+                // not collide on the unique index, so add a numeric suffix.
+                $base = \Illuminate\Support\Str::slug($status->name, '') ?: 'status';
+                $key = $base;
+                $i = 2;
+                while (static::where('key', $key)->exists()) {
+                    $key = $base.$i++;
+                }
+                $status->key = $key;
             }
         });
     }

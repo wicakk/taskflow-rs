@@ -60,9 +60,9 @@ export default function TaskDetail({ task, project, onClose }) {
       assignees: f.assignees.includes(id) ? f.assignees.filter((a) => a !== id) : [...f.assignees, id],
     }));
 
-  const saveEdit = (e) => {
+  const saveEdit = async (e) => {
     e.preventDefault();
-    updateTask(task.id, {
+    const saved = await updateTask(task.id, {
       title: form.title,
       description: form.description,
       priority: form.priority,
@@ -70,7 +70,7 @@ export default function TaskDetail({ task, project, onClose }) {
       dueDate: form.dueDate,
       labels: form.labels,
     });
-    setEditing(false);
+    if (saved) setEditing(false); // on failure the edit form stays open with the user's input
   };
 
   return (
@@ -318,10 +318,10 @@ export default function TaskDetail({ task, project, onClose }) {
         title="Delete this task?"
         message={`"${task.title}" will be permanently removed.`}
         onCancel={() => setConfirmDelete(false)}
-        onConfirm={() => {
-          deleteTask(task.id);
+        onConfirm={async () => {
+          const ok = await deleteTask(task.id);
           setConfirmDelete(false);
-          onClose();
+          if (ok) onClose();
         }}
       />
     </div>

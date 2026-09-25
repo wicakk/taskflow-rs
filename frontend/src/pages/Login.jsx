@@ -22,14 +22,19 @@ export default function Login() {
   const [password, setPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
   const [error, setError] = useState("");
+  const [submitting, setSubmitting] = useState(false);
 
   if (isAuthenticated) {
     return <Navigate to={location.state?.from?.pathname || "/"} replace />;
   }
 
-  const submit = (e) => {
+  const submit = async (e) => {
     e.preventDefault();
-    const res = login(email, password);
+    if (submitting) return;
+    setSubmitting(true);
+    setError("");
+    const res = await login(email, password);
+    setSubmitting(false);
     if (!res.success) {
       setError(res.error);
       return;
@@ -37,9 +42,14 @@ export default function Login() {
     navigate(location.state?.from?.pathname || "/", { replace: true });
   };
 
-  const quickLogin = (acc) => {
-    const res = login(acc.email, acc.password);
+  const quickLogin = async (acc) => {
+    if (submitting) return;
+    setSubmitting(true);
+    setError("");
+    const res = await login(acc.email, acc.password);
+    setSubmitting(false);
     if (res.success) navigate(location.state?.from?.pathname || "/", { replace: true });
+    else setError(res.error);
   };
 
   return (
@@ -102,12 +112,13 @@ export default function Login() {
 
             <button
               type="submit"
+              disabled={submitting}
               className="w-full py-2.5 rounded-[10px] text-[13.5px] font-semibold text-white transition-colors"
-              style={{ background: "#7367F0" }}
+              style={{ background: "#7367F0", opacity: submitting ? 0.7 : 1 }}
               onMouseEnter={(e) => (e.currentTarget.style.background = "#6257DC")}
               onMouseLeave={(e) => (e.currentTarget.style.background = "#7367F0")}
             >
-              Sign In
+              {submitting ? "Signing in..." : "Sign In"}
             </button>
           </form>
         </div>

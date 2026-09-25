@@ -14,11 +14,15 @@ export default function AnnouncementFormModal({ open, onClose }) {
   const [title, setTitle] = useState("");
   const [body, setBody] = useState("");
   const [pinned, setPinned] = useState(false);
+  const [saving, setSaving] = useState(false);
 
-  const submit = (e) => {
+  const submit = async (e) => {
     e.preventDefault();
-    if (!title.trim() || !body.trim()) return;
-    addAnnouncement({ title: title.trim(), body: body.trim(), authorId: user.id, pinned: can("announcement:pin") ? pinned : false });
+    if (!title.trim() || !body.trim() || saving) return;
+    setSaving(true);
+    const saved = await addAnnouncement({ title: title.trim(), body: body.trim(), pinned: can("announcement:pin") ? pinned : false });
+    setSaving(false);
+    if (!saved) return; // API error toast already shown; keep the text so nothing is lost
     setTitle("");
     setBody("");
     setPinned(false);
@@ -44,7 +48,7 @@ export default function AnnouncementFormModal({ open, onClose }) {
         )}
         <div className="flex justify-end gap-2 pt-2">
           <Button type="button" variant="ghost" onClick={onClose}>Cancel</Button>
-          <Button type="submit">Post Announcement</Button>
+          <Button type="submit" disabled={saving}>{saving ? "Posting..." : "Post Announcement"}</Button>
         </div>
       </form>
     </Modal>

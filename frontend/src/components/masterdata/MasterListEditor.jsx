@@ -38,16 +38,17 @@ export default function MasterListEditor({
     setDraft(item);
   };
 
-  const saveEdit = () => {
+  const saveEdit = async () => {
     if (!draft.name?.trim()) return;
-    updateItem(listName, editingId, draft);
-    setEditingId(null);
+    const saved = await updateItem(listName, editingId, draft);
+    if (saved) setEditingId(null); // on failure stay in edit mode (error toast already shown)
   };
 
-  const submitAdd = (e) => {
+  const submitAdd = async (e) => {
     e.preventDefault();
     if (!newDraft.name.trim()) return;
-    addItem(listName, newDraft);
+    const saved = await addItem(listName, newDraft);
+    if (!saved) return;
     setNewDraft({ name: "", description: "", color: "#7367F0" });
     setAdding(false);
   };
@@ -179,8 +180,8 @@ export default function MasterListEditor({
         title={`Delete "${deleteTarget?.name}"?`}
         message="This item will be permanently removed from the list."
         onCancel={() => setDeleteTarget(null)}
-        onConfirm={() => {
-          deleteItem(listName, deleteTarget.id);
+        onConfirm={async () => {
+          await deleteItem(listName, deleteTarget.id);
           setDeleteTarget(null);
         }}
       />

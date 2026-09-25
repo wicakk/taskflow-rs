@@ -15,6 +15,7 @@ export default function MemberFormModal({ open, onClose, member, onSaved }) {
   const { addMember, updateMember } = useTasksStore();
   const { jobTitles } = useMasterData();
   const [form, setForm] = useState(empty);
+  const [saving, setSaving] = useState(false);
   const isEdit = !!member;
 
   useEffect(() => {
@@ -23,12 +24,15 @@ export default function MemberFormModal({ open, onClose, member, onSaved }) {
 
   const set = (key) => (e) => setForm((f) => ({ ...f, [key]: e.target.value }));
 
-  const submit = (e) => {
+  const submit = async (e) => {
     e.preventDefault();
-    if (!form.name.trim() || !form.email.trim()) return;
+    if (!form.name.trim() || !form.email.trim() || saving) return;
     const payload = { ...form };
     if (isEdit && !payload.password) delete payload.password; // keep old password if left blank
-    const saved = isEdit ? (updateMember(member.id, payload), { ...member, ...payload }) : addMember(payload);
+    setSaving(true);
+    const saved = isEdit ? await updateMember(member.id, payload) : await addMember(payload);
+    setSaving(false);
+    if (!saved) return; // API error toast already shown; keep the form open
     onSaved?.(saved);
     onClose();
   };
@@ -70,7 +74,7 @@ export default function MemberFormModal({ open, onClose, member, onSaved }) {
         </div>
         <div className="flex justify-end gap-2 pt-2">
           <Button type="button" variant="ghost" onClick={onClose}>Cancel</Button>
-          <Button type="submit">{isEdit ? "Save Changes" : "Add Member"}</Button>
+          <Button type="submit" disabled={saving}>{saving ? "Saving..." : isEdit ? "Save Changes" : "Add Member"}</Button>
         </div>
       </form>
     </Modal>

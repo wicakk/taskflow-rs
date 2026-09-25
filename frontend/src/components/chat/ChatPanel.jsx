@@ -9,21 +9,31 @@ import ChatMessage from "./ChatMessage";
 export default function ChatPanel({ projectId }) {
   const { c } = useTheme();
   const { user } = useAuth();
-  const { chatForProject, sendChatMessage, deleteChatMessage } = useTasksStore();
+  const { chatForProject, loadChat, sendChatMessage, deleteChatMessage } = useTasksStore();
   const [text, setText] = useState("");
   const bottomRef = useRef(null);
 
   const messages = chatForProject(projectId);
 
+  // Load this project's messages from the database, then poll so messages
+  // sent by teammates show up without a manual refresh.
+  useEffect(() => {
+    loadChat(projectId);
+    const timer = setInterval(() => loadChat(projectId), 8000);
+    return () => clearInterval(timer);
+  }, [projectId, loadChat]);
+
   useEffect(() => {
     bottomRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [messages.length]);
 
-  const submit = (e) => {
+  const submit = async (e) => {
     e.preventDefault();
-    if (!text.trim()) return;
-    sendChatMessage(projectId, user.id, text.trim());
+    const message = text.trim();
+    if (!message) return;
     setText("");
+    const sent = await sendChatMessage(projectId, user.id, message);
+    if (!sent) setText(message); // failed: put the text back so it isn't lost
   };
 
   return (

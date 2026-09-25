@@ -2,16 +2,19 @@ import React, { useState } from "react";
 import { Settings as SettingsIcon, RotateCcw } from "lucide-react";
 import { useTheme } from "../hooks/useTheme";
 import Card from "../components/common/Card";
-import ConfirmDialog from "../components/common/ConfirmDialog";
+import { useTasksStore } from "../hooks/useTasksStore";
+import { useMasterData } from "../hooks/useMasterData";
 
 export default function Settings() {
   const { c, dark, toggleDark } = useTheme();
-  const [confirmReset, setConfirmReset] = useState(false);
+  const store = useTasksStore();
+  const master = useMasterData();
+  const [refreshing, setRefreshing] = useState(false);
 
-  const resetDemoData = () => {
-    window.localStorage.removeItem("taskflow.data.v1");
-    window.localStorage.removeItem("taskflow.masterdata.v1");
-    window.location.reload();
+  const refreshData = async () => {
+    setRefreshing(true);
+    await Promise.all([store.reload(), master.reload()]);
+    setRefreshing(false);
   };
 
   return (
@@ -40,17 +43,18 @@ export default function Settings() {
 
       <Card className="p-5 flex items-center justify-between max-w-md">
         <div>
-          <div className="text-[13.5px] font-medium" style={{ color: c.textStrong }}>Reset demo data</div>
+          <div className="text-[13.5px] font-medium" style={{ color: c.textStrong }}>Muat ulang data</div>
           <div className="text-[12px] mt-0.5 max-w-[280px]" style={{ color: c.muted }}>
-            Data project, task, chat, pengumuman, dan Master Data disimpan di browser ini. Klik untuk kembalikan ke data contoh awal.
+            Semua data (project, task, chat, pengumuman, Master Data) disimpan di database server. Klik untuk mengambil data terbaru.
           </div>
         </div>
         <button
-          onClick={() => setConfirmReset(true)}
+          onClick={refreshData}
+          disabled={refreshing}
           className="p-2.5 rounded-[10px] shrink-0"
-          style={{ border: `1px solid ${c.border}`, color: "#EA5455" }}
+          style={{ border: `1px solid ${c.border}`, color: "#7367F0", opacity: refreshing ? 0.6 : 1 }}
         >
-          <RotateCcw size={16} />
+          <RotateCcw size={16} className={refreshing ? "animate-spin" : ""} />
         </button>
       </Card>
 
@@ -59,14 +63,6 @@ export default function Settings() {
         <div className="text-[14px] font-semibold" style={{ color: c.textStrong }}>More settings coming soon</div>
       </Card>
 
-      <ConfirmDialog
-        open={confirmReset}
-        title="Reset semua data ke kondisi awal?"
-        message="Semua project, task, chat, dan pengumuman yang sudah kamu buat/ubah di browser ini akan hilang dan kembali ke data contoh awal. Aksi ini tidak bisa dibatalkan."
-        confirmLabel="Reset"
-        onCancel={() => setConfirmReset(false)}
-        onConfirm={resetDemoData}
-      />
     </div>
   );
 }

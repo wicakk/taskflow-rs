@@ -26,6 +26,7 @@ export default function ProjectFormModal({ open, onClose, project, onSaved }) {
     members: [],
   };
   const [form, setForm] = useState(empty);
+  const [saving, setSaving] = useState(false);
   const isEdit = !!project;
 
   useEffect(() => {
@@ -41,11 +42,14 @@ export default function ProjectFormModal({ open, onClose, project, onSaved }) {
       members: f.members.includes(id) ? f.members.filter((m) => m !== id) : [...f.members, id],
     }));
 
-  const submit = (e) => {
+  const submit = async (e) => {
     e.preventDefault();
-    if (!form.name.trim()) return;
+    if (!form.name.trim() || saving) return;
     const payload = { ...form, progress: Number(form.progress) || 0 };
-    const saved = isEdit ? (updateProject(project.id, payload), { ...project, ...payload }) : addProject(payload);
+    setSaving(true);
+    const saved = isEdit ? await updateProject(project.id, payload) : await addProject(payload);
+    setSaving(false);
+    if (!saved) return; // API error toast already shown; keep the form open so nothing is lost
     onSaved?.(saved);
     onClose();
   };
@@ -137,7 +141,7 @@ export default function ProjectFormModal({ open, onClose, project, onSaved }) {
 
         <div className="flex justify-end gap-2 pt-2">
           <Button type="button" variant="ghost" onClick={onClose}>Cancel</Button>
-          <Button type="submit">{isEdit ? "Save Changes" : "Create Project"}</Button>
+          <Button type="submit" disabled={saving}>{saving ? "Saving..." : isEdit ? "Save Changes" : "Create Project"}</Button>
         </div>
       </form>
     </Modal>

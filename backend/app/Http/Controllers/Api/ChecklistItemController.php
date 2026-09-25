@@ -18,7 +18,7 @@ class ChecklistItemController extends Controller
         $order = $task->checklistItems()->max('order') + 1;
         $item = $task->checklistItems()->create(['text' => $data['text'], 'order' => $order]);
 
-        return response()->json($item, 201);
+        return response()->json($item->refresh(), 201);
     }
 
     public function update(Request $request, ChecklistItem $checklistItem)

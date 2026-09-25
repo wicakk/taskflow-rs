@@ -59,8 +59,8 @@ kartu "Demo accounts" di halaman login untuk login otomatis:
 | Member | dewi@taskflow.io | member123 | Bisa buat/ubah task, tidak bisa hapus/kelola project |
 | Viewer | klien@taskflow.io | viewer123 | Read-only — tidak ada tombol create/edit/delete, drag & drop kanban nonaktif |
 
-Sesi login disimpan di `localStorage` (key `taskflow.auth.userId`) sehingga tetap login
-setelah refresh. Logout tersedia di sidebar (ikon di sebelah nama) dan di dropdown profil
+Login memakai API backend (`POST /api/login`); token-nya disimpan di `localStorage` (key
+`taskflow.auth.token`) sehingga tetap login setelah refresh. Logout tersedia di sidebar (ikon di sebelah nama) dan di dropdown profil
 pada header.
 
 Matrix hak akses ada di `src/utils/permissions.js` — mudah diubah kalau kebutuhan role
@@ -86,7 +86,7 @@ berbeda dari yang di atas.
   
   Semua form (New Project, New Task, Add Member) dan tampilan (Kanban, badge status/priority, Reports) otomatis mengikuti data dari Master Data ini — bukan lagi hardcode. Item yang masih dipakai (ditandai "used by N task/project") tidak bisa dihapus untuk mencegah data rusak.
 - **Semua form tampil sebagai drawer dari samping kanan** (New Project, New Task, Add Member, New Announcement) — bukan popup di tengah, konsisten dengan drawer Task Detail, lengkap dengan animasi slide.
-- **Data tersimpan otomatis** — semua perubahan (task, project, chat, pengumuman, dan Master Data) disimpan di `localStorage` browser, jadi tetap akurat walau reload halaman atau pindah menu. Reset ke data contoh tersedia di halaman Settings.
+- **Data tersimpan di database** — semua perubahan (task, project, chat, pengumuman, anggota tim, dan Master Data) dikirim ke REST API Laravel dan tersimpan di MySQL, jadi konsisten di semua perangkat dan tetap ada setelah reload. Halaman Settings punya tombol *Muat ulang data* untuk mengambil data terbaru dari server.
 - Calendar — month view dengan deadline per tanggal
 - Team — **tambah/edit/hapus anggota** beserta role akses (khusus Admin)
 - Dark mode penuh lewat `ThemeProvider` + `useTheme()`
@@ -94,23 +94,21 @@ berbeda dari yang di atas.
 - **Login/logout** dengan 4 role (Admin, Project Manager, Member, Viewer) dan matrix hak akses granular per aksi (create/edit/delete project, create/edit/delete/move task, kelola tim)
 
 
-## Database
+## Database & koneksi ke backend
 
-Saat ini aplikasi **belum terhubung ke database sungguhan**. Semua data (project, task, team, chat, pengumuman, Master Data) disimpan di **`localStorage` browser** kamu sendiri lewat `src/hooks/useTasksStore.jsx` dan `src/hooks/useMasterData.jsx` — jadi data hanya ada di browser/komputer yang dipakai, tidak sinkron antar device, dan bisa hilang kalau cache browser dibersihkan (makanya ada tombol "Reset demo data" di Settings).
+Aplikasi ini terhubung ke backend Laravel (`../backend`). Semua data disimpan di database MySQL
+lewat REST API; browser hanya menyimpan token login.
 
-Ini cocok untuk demo/prototype, tapi untuk pemakaian produksi (banyak user, data konsisten di semua perangkat), kamu perlu database sungguhan di backend — lihat bagian berikutnya.
+- `src/api.js` — pembungkus `fetch` (base URL dari `VITE_API_URL`, header `Authorization: Bearer`,
+  pesan error dari validasi Laravel, logout otomatis kalau token kedaluwarsa).
+- `src/hooks/useAuth.jsx` — login/logout/`/me` ke API.
+- `src/hooks/useTasksStore.jsx` — project, task, checklist, tim, chat, pengumuman (semua CRUD ke API;
+  drag & drop kanban dan checklist memakai *optimistic update* dengan rollback kalau server menolak).
+- `src/hooks/useMasterData.jsx` — Master Data lewat `/api/master-data/{type}`.
+- `src/hooks/useToast.jsx` — notifikasi error (mis. tidak punya izin, validasi gagal, server mati).
 
-## Menyambungkan ke backend (Laravel / REST API)
-
-Semua data mock ada di `src/data/mockData.js` dan dikonsumsi lewat `useTasksStore()`
-(`src/hooks/useTasksStore.js`). Untuk pindah ke API sungguhan:
-
-1. Ganti `useState(taskSeed)` / `useState(projectSeed)` di `useTasksStore.js` dengan `fetch`/`axios`
-   ke endpoint Laravel kamu (misalnya `GET /api/projects`, `GET /api/tasks`).
-2. Ganti `updateTaskStatus` dan `toggleChecklistItem` agar juga memanggil `PATCH /api/tasks/:id`.
-3. Struktur data (`Project`, `Task`) di mock sudah dirancang mengikuti field yang diminta
-   (id, name, description, status, priority, progress, startDate, dueDate, members, tasks / checklist,
-   comments, attachments) sehingga bisa langsung dipetakan ke response API tanpa mengubah komponen UI.
+Jalankan backend dulu (`cd ../backend && php artisan serve`), lalu `npm run dev`.
+Alamat API bisa diubah lewat `.env` (lihat `.env.example`).
 
 ## Catatan
 
@@ -119,5 +117,6 @@ Semua data mock ada di `src/data/mockData.js` dan dikonsumsi lewat `useTasksStor
   yang dipakai lewat inline style, misalnya warna avatar/badge yang bergantung data). Keduanya
   memakai hex yang sama persis dari brief.
 - Tanggal "hari ini" untuk keperluan mock (badge overdue, kalender) di-pin ke `2026-09-06` di
-  `src/data/mockData.js` (`TODAY`) supaya data seed tetap relevan — ganti ke `new Date()` saat data
-  asli sudah tersambung.
+  `src/data/mockData.js` (`TODAY`). Data seed di file itu sudah tidak dipakai lagi (data asli dari
+  database); yang masih dipakai hanya fungsi bantu seperti `fmtDate`, `memberById`, dan `TODAY`.
+  Ganti `TODAY` ke `new Date()` kalau ingin badge overdue/kalender mengikuti tanggal sebenarnya.

@@ -58,7 +58,9 @@ class TaskController extends Controller
         $task->assignees()->sync($data['assignees'] ?? []);
         $this->syncLabels($task, $data['labels'] ?? []);
 
-        return new TaskResource($task->load(['labels', 'checklistItems', 'assignees']));
+        // refresh() so DB defaults (comments_count, attachments_count) and
+        // casted types (project_id as int) are present in the response.
+        return new TaskResource($task->refresh()->load(['labels', 'checklistItems', 'assignees']));
     }
 
     public function update(Request $request, Task $task)

@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import { ChevronLeft, Settings, Trash2, Plus } from "lucide-react";
 import { useTheme } from "../hooks/useTheme";
@@ -37,14 +37,22 @@ export default function ProjectDetail() {
   const { can } = useAuth();
   const { id } = useParams();
   const navigate = useNavigate();
-  const { projects, tasks, teamMembers, openTask, updateTaskStatus, deleteProject, chatForProject } = useTasksStore();
+  const { projects, tasks, teamMembers, openTask, updateTaskStatus, deleteProject, chatForProject, loadChat } = useTasksStore();
   const { projectStatusColor, priorityColor, taskStatuses } = useMasterData();
   const [tab, setTab] = useState("board");
   const [editOpen, setEditOpen] = useState(false);
   const [deleteOpen, setDeleteOpen] = useState(false);
   const [taskModal, setTaskModal] = useState(null); // { status } | null
 
-  const project = projects.find((p) => p.id === id);
+  // Route params are strings; ids from the API are numbers.
+  const project = projects.find((p) => String(p.id) === id);
+  const projectId = project?.id;
+
+  // Load this project's chat so the tab counter is correct before opening it.
+  useEffect(() => {
+    if (projectId) loadChat(projectId);
+  }, [projectId, loadChat]);
+
   if (!project) {
     return (
       <Card className="p-10 text-center">
@@ -170,9 +178,10 @@ export default function ProjectDetail() {
         title="Delete this project?"
         message={`"${project.name}" and all its tasks will be permanently removed. This can't be undone.`}
         onCancel={() => setDeleteOpen(false)}
-        onConfirm={() => {
-          deleteProject(project.id);
-          navigate("/projects");
+        onConfirm={async () => {
+          const ok = await deleteProject(project.id);
+          if (ok) navigate("/projects");
+          else setDeleteOpen(false);
         }}
       />
     </div>

@@ -1,47 +1,73 @@
-import { createContext, useContext, useEffect, useState } from "react";
-import { useTasksStore } from "./useTasksStore";
+import { createContext, useCallback, useContext, useEffect, useState } from "react";
+import { api, clearToken, getToken, setToken, setUnauthorizedHandler } from "../api";
 import { can } from "../utils/permissions";
 
 const AuthContext = createContext(null);
-const STORAGE_KEY = "taskflow.auth.userId";
+
+const normalizeUser = (u) => (u ? { ...u, role: u.role ?? "" } : null);
 
 export function AuthProvider({ children }) {
-  const { teamMembers } = useTasksStore();
-  const [userId, setUserId] = useState(() => {
-    if (typeof window === "undefined") return null;
-    const stored = window.localStorage.getItem(STORAGE_KEY);
-    return stored ? Number(stored) : null;
-  });
+  const [user, setUser] = useState(null);
+  // If a token is already stored, we must ask the server who it belongs to
+  // before deciding whether to show the app or the login page.
+  const [booting, setBooting] = useState(() => !!getToken());
 
-  // If the logged-in member gets deleted by an admin, drop the session.
+  const dropSession = useCallback(() => {
+    clearToken();
+    setUser(null);
+  }, []);
+
   useEffect(() => {
-    if (userId && !teamMembers.some((m) => m.id === userId)) {
-      setUserId(null);
+    setUnauthorizedHandler(dropSession);
+    return () => setUnauthorizedHandler(null);
+  }, [dropSession]);
+
+  useEffect(() => {
+    if (!getToken()) return undefined;
+    let cancelled = false;
+    api
+      .get("/me")
+      .then((me) => !cancelled && setUser(normalizeUser(me)))
+      .catch((err) => {
+        // Only a real "not logged in" answer ends the session. If the server
+        // is just unreachable, keep the token so a reload can recover.
+        if (!cancelled && err.status === 401) dropSession();
+      })
+      .finally(() => !cancelled && setBooting(false));
+    return () => {
+      cancelled = true;
+    };
+  }, [dropSession]);
+
+  const login = async (email, password) => {
+    try {
+      const res = await api.post("/login", { email: email.trim(), password });
+      setToken(res.token);
+      const u = normalizeUser(res.user);
+      setUser(u);
+      return { success: true, user: u };
+    } catch (err) {
+      return { success: false, error: err.message || "Email atau password salah." };
     }
-  }, [teamMembers, userId]);
-
-  const user = teamMembers.find((m) => m.id === userId) || null;
-
-  const login = (email, password) => {
-    const match = teamMembers.find(
-      (m) => m.email.toLowerCase() === email.trim().toLowerCase() && m.password === password
-    );
-    if (!match) return { success: false, error: "Email atau password salah." };
-    setUserId(match.id);
-    window.localStorage.setItem(STORAGE_KEY, String(match.id));
-    return { success: true, user: match };
   };
 
   const logout = () => {
-    setUserId(null);
-    window.localStorage.removeItem(STORAGE_KEY);
+    // Fire-and-forget: revoke the token server-side, but never make the user
+    // wait (or get stuck) if the request fails.
+    if (getToken()) api.post("/logout").catch(() => {});
+    dropSession();
   };
+
+  // Keep the logged-in user's profile in sync after they edit themselves in Team.
+  const syncUser = (patch) => setUser((cur) => (cur && patch?.id === cur.id ? { ...cur, ...normalizeUser(patch) } : cur));
 
   const value = {
     user,
+    booting,
     isAuthenticated: !!user,
     login,
     logout,
+    syncUser,
     can: (action) => can(user?.accessRole, action),
   };
 

@@ -2,7 +2,7 @@ import React from "react";
 import { useTheme } from "../../hooks/useTheme";
 import { BRAND } from "../../theme";
 
-export default function Button({ children, variant = "primary", onClick, className = "", icon: Icon, type = "button" }) {
+export default function Button({ children, variant = "primary", onClick, className = "", icon: Icon, type = "button", disabled = false }) {
   const { c } = useTheme();
   const styles = {
     primary: { background: BRAND.primary, color: "#fff", border: "none" },
@@ -13,8 +13,9 @@ export default function Button({ children, variant = "primary", onClick, classNa
     <button
       type={type}
       onClick={onClick}
+      disabled={disabled}
       className={`inline-flex items-center gap-1.5 px-3.5 py-2 rounded-[10px] text-[13px] font-medium transition-all duration-150 active:scale-[0.98] ${className}`}
-      style={styles}
+      style={{ ...styles, opacity: disabled ? 0.6 : 1, cursor: disabled ? "not-allowed" : "pointer" }}
       onMouseEnter={(e) => {
         e.currentTarget.style.background = variant === "primary" ? BRAND.primaryHover : c.hover;
       }}

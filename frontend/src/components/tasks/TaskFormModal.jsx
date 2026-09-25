@@ -28,6 +28,7 @@ export default function TaskFormModal({ open, onClose, projectId, defaultStatus,
     labels: [],
   };
   const [form, setForm] = useState(empty);
+  const [saving, setSaving] = useState(false);
 
   useEffect(() => {
     if (open) {
@@ -55,10 +56,11 @@ export default function TaskFormModal({ open, onClose, projectId, defaultStatus,
       assignees: f.assignees.includes(id) ? f.assignees.filter((a) => a !== id) : [...f.assignees, id],
     }));
 
-  const submit = (e) => {
+  const submit = async (e) => {
     e.preventDefault();
-    if (!form.title.trim() || !form.projectId) return;
-    const task = addTask({
+    if (!form.title.trim() || !form.projectId || saving) return;
+    setSaving(true);
+    const task = await addTask({
       projectId: form.projectId,
       title: form.title,
       description: form.description,
@@ -68,6 +70,8 @@ export default function TaskFormModal({ open, onClose, projectId, defaultStatus,
       dueDate: form.dueDate,
       labels: form.labels,
     });
+    setSaving(false);
+    if (!task) return; // API error toast already shown; keep the form open
     onSaved?.(task);
     onClose();
   };
@@ -170,7 +174,7 @@ export default function TaskFormModal({ open, onClose, projectId, defaultStatus,
         </div>
         <div className="flex justify-end gap-2 pt-2">
           <Button type="button" variant="ghost" onClick={onClose}>Cancel</Button>
-          <Button type="submit">Create Task</Button>
+          <Button type="submit" disabled={saving}>{saving ? "Saving..." : "Create Task"}</Button>
         </div>
       </form>
     </Modal>

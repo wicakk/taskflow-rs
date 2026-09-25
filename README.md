@@ -8,34 +8,37 @@ taskflow/
 └── backend/    Laravel 12 + MySQL (REST API)
 ```
 
-## ⚠️ Penting — status koneksi FE ↔ BE
+## Status koneksi FE ↔ BE: sudah terhubung
 
-**Kedua project ini belum saling terhubung.** Masing-masing bisa langsung dijalankan dan dipakai
-sendiri-sendiri, tapi:
+Frontend sekarang mengambil dan menyimpan **semua** data lewat REST API Laravel, sehingga
+setiap create / update / delete (project, task, checklist, chat, pengumuman, anggota tim, dan
+Master Data) langsung tersimpan di **database MySQL** — bukan lagi di `localStorage` browser.
 
-- **`frontend/`** saat ini masih menyimpan semua data (project, task, chat, dst) di
-  **`localStorage` browser** — belum memanggil API sama sekali.
-- **`backend/`** adalah REST API yang sudah lengkap (auth, CRUD, permission, Master Data) dan
-  bisa langsung dites pakai `curl`/Postman, tapi belum ada yang "memanggilnya" dari frontend.
+- Yang masih disimpan di browser hanya **token login** (`taskflow.auth.token`).
+- Login memakai `POST /api/login` (Laravel Sanctum). Password tidak lagi ada di frontend.
+- Hak akses tetap dicek di server (`app/Support/Permissions.php`); kalau aksi ditolak,
+  frontend menampilkan pesan error dan membatalkan perubahan di layar.
+- Data lama yang dulu tersimpan di `localStorage` (data demo) **tidak** dimigrasi otomatis —
+  data awal sekarang datang dari `php artisan migrate --seed`.
 
-Supaya keduanya benar-benar terhubung (frontend ambil/simpan data lewat API, bukan localStorage
-lagi), langkah `useTasksStore.jsx` & `useMasterData.jsx` di frontend perlu diubah dari
-`useState + localStorage` menjadi `fetch()` ke `backend/`. **Ini belum saya kerjakan** — kalau
-mau, bilang saja di pesan berikutnya dan saya sambungkan.
+**Urutan menjalankan: backend dulu, baru frontend.**
 
-Sampai langkah itu dikerjakan, jalankan keduanya sebagai berikut:
-
-## 1. Menjalankan Frontend
+## 1. Menjalankan Frontend (setelah backend hidup)
 
 ```bash
 cd frontend
 npm install
 npm run dev
 ```
-Buka `http://localhost:5173` → langsung terpakai penuh (login, CRUD, dst) dengan data tersimpan
-di browser. Lihat `frontend/README.md` untuk akun demo & detail fitur.
+Buka `http://localhost:5173` dan login (mis. `rizqi@taskflow.io` / `admin123`). Data diambil dari
+backend; kalau backend belum jalan, layar akan menampilkan pesan "tidak dapat terhubung ke
+server" beserta tombol *Coba lagi*.
 
-## 2. Menjalankan Backend
+Alamat API default `http://localhost:8000/api`. Kalau backend jalan di tempat lain, salin
+`frontend/.env.example` menjadi `frontend/.env` lalu ubah `VITE_API_URL`.
+Lihat `frontend/README.md` untuk akun demo & detail fitur.
+
+## 2. Menjalankan Backend (jalankan ini lebih dulu)
 
 ```bash
 cd backend
@@ -56,11 +59,10 @@ deployment terpisah yang berkomunikasi lewat HTTP — bukan satu aplikasi monoli
 bisa di-develop, di-deploy, dan di-scale masing-masing secara independen (misalnya frontend di
 Vercel/Netlify, backend di VPS terpisah).
 
-## 4. Rencana selanjutnya (kalau mau dilanjutkan)
+## 4. Rencana selanjutnya (opsional)
 
-1. Sambungkan `frontend/src/hooks/useTasksStore.jsx` & `useMasterData.jsx` ke endpoint di
-   `backend/routes/api.php` (ganti `useState+localStorage` → `fetch`/`axios`).
-2. Simpan token login (dari `POST /api/login`) di frontend, kirim sebagai header
-   `Authorization: Bearer {token}` di setiap request ke backend.
-3. Deploy: frontend bisa di-build (`npm run build`) jadi static file, backend perlu server PHP +
-   MySQL (VPS, shared hosting yang support Laravel, atau platform seperti Laravel Forge/Vapor).
+1. Deploy: frontend bisa di-build (`npm run build`) jadi static file; backend perlu server PHP +
+   MySQL (VPS, shared hosting yang support Laravel, atau Laravel Forge/Vapor). Ingat mengisi
+   `FRONTEND_URL` di `backend/.env` dan `VITE_API_URL` di frontend dengan URL produksi.
+2. Real-time: saat ini chat di-*polling* tiap beberapa detik dan data lain diambil saat halaman
+   dibuka; untuk update instan antar user bisa ditambah Laravel Reverb / Pusher.

@@ -30,7 +30,7 @@ export default function MainLayout() {
   let breadcrumb = [pageTitle];
 
   if (location.pathname.startsWith("/projects/") && params.id) {
-    const project = projects.find((p) => p.id === params.id);
+    const project = projects.find((p) => String(p.id) === params.id);
     pageTitle = project?.name || "Project";
     breadcrumb = ["Projects", pageTitle];
   }

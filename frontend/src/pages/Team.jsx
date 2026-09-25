@@ -68,7 +68,7 @@ export default function Team() {
       <ConfirmDialog
         open={!!deleteTarget}
         title="Remove this member?"
-        message={`"${deleteTarget?.name}" will lose access to TaskFlow. Existing tasks stay assigned to them, but they can no longer log in.`}
+        message={`"${deleteTarget?.name}" will lose access to TaskFlow and be removed from the tasks and projects they were assigned to.`}
         confirmLabel="Remove"
         onCancel={() => setDeleteTarget(null)}
         onConfirm={() => {

@@ -1,135 +1,142 @@
-import { createContext, useContext, useEffect, useState } from "react";
+import { createContext, useCallback, useContext, useEffect, useRef, useState } from "react";
+import { api } from "../api";
 import { BRAND } from "../theme";
+import { useAuth } from "./useAuth";
+import { useToast } from "./useToast";
 
-const STORAGE_KEY = "taskflow.masterdata.v1";
+// Master Data (task statuses, priorities, project statuses, labels,
+// departments, job titles) is stored in the database and managed through
+// /api/master-data/{type}. Only admins may change it (enforced server-side).
 
-const slugify = (s) =>
-  s.trim().toLowerCase().replace(/[^a-z0-9]+/g, "").slice(0, 24) || `item${Date.now()}`;
+const TYPES = ["taskStatuses", "priorities", "projectStatuses", "labels", "departments", "jobTitles"];
+const ORDERED = ["taskStatuses", "priorities", "projectStatuses"]; // server orders these by `order`, the rest by name
 
-const seed = {
-  // Drives the Kanban board columns (order = workflow order). `key` is the
-  // stable identifier stored on each task; it never changes after creation
-  // so renaming a stage doesn't break existing tasks.
-  taskStatuses: [
-    { id: 1, key: "todo", name: "To Do", color: BRAND.muted },
-    { id: 2, key: "inprogress", name: "In Progress", color: BRAND.primary },
-    { id: 3, key: "review", name: "Review", color: BRAND.info },
-    { id: 4, key: "done", name: "Done", color: BRAND.success },
-  ],
-  priorities: [
-    { id: 1, name: "Low", color: BRAND.info },
-    { id: 2, name: "Medium", color: BRAND.warning },
-    { id: 3, name: "High", color: BRAND.danger },
-  ],
-  projectStatuses: [
-    { id: 1, name: "Planning", color: BRAND.warning },
-    { id: 2, name: "In Progress", color: BRAND.primary },
-    { id: 3, name: "Review", color: BRAND.info },
-    { id: 4, name: "Completed", color: BRAND.success },
-  ],
-  labels: [
-    { id: 1, name: "Analysis", color: "#00CFE8" },
-    { id: 2, name: "Design", color: "#9B8AFB" },
-    { id: 3, name: "Frontend", color: "#7367F0" },
-    { id: 4, name: "Backend", color: "#28C76F" },
-    { id: 5, name: "QA", color: "#FF9F43" },
-    { id: 6, name: "Docs", color: "#9CA3AF" },
-    { id: 7, name: "Meeting", color: "#00CFE8" },
-    { id: 8, name: "Bugfix", color: "#EA5455" },
-    { id: 9, name: "DevOps", color: "#5E5873" },
-    { id: 10, name: "Security", color: "#EA5455" },
-    { id: 11, name: "Integration", color: "#28C76F" },
-  ],
-  departments: [
-    { id: 1, name: "SIMRS SEHAT", description: "Sistem informasi manajemen rumah sakit utama" },
-    { id: 2, name: "eLLIMS", description: "Sistem informasi laboratorium" },
-    { id: 3, name: "NICU", description: "Neonatal intensive care unit" },
-    { id: 4, name: "Kamar Bedah", description: "Instalasi bedah sentral" },
-    { id: 5, name: "Kebidanan", description: "Unit kebidanan & kandungan" },
-  ],
-  jobTitles: [
-    { id: 1, name: "Project Manager" },
-    { id: 2, name: "Frontend Engineer" },
-    { id: 3, name: "Backend Engineer" },
-    { id: 4, name: "QA Engineer" },
-    { id: 5, name: "UI/UX Designer" },
-    { id: 6, name: "Business Analyst" },
-    { id: 7, name: "Stakeholder" },
-  ],
-};
+const normalizeItem = (item) => ({
+  ...item,
+  id: Number(item.id),
+  ...(item.description !== undefined ? { description: item.description ?? "" } : {}),
+});
 
-function loadPersisted() {
-  if (typeof window === "undefined") return null;
-  try {
-    const raw = window.localStorage.getItem(STORAGE_KEY);
-    return raw ? JSON.parse(raw) : null;
-  } catch {
-    return null;
-  }
-}
-const persisted = loadPersisted();
+const byName = (a, b) => a.name.localeCompare(b.name);
 
 const MasterDataContext = createContext(null);
 
 export function MasterDataProvider({ children }) {
-  const [taskStatuses, setTaskStatuses] = useState(persisted?.taskStatuses || seed.taskStatuses);
-  const [priorities, setPriorities] = useState(persisted?.priorities || seed.priorities);
-  const [projectStatuses, setProjectStatuses] = useState(persisted?.projectStatuses || seed.projectStatuses);
-  const [labels, setLabels] = useState(persisted?.labels || seed.labels);
-  const [departments, setDepartments] = useState(persisted?.departments || seed.departments);
-  const [jobTitles, setJobTitles] = useState(persisted?.jobTitles || seed.jobTitles);
+  const { user } = useAuth();
+  const { toast } = useToast();
 
-  useEffect(() => {
+  const [lists, setLists] = useState({
+    taskStatuses: [],
+    priorities: [],
+    projectStatuses: [],
+    labels: [],
+    departments: [],
+    jobTitles: [],
+  });
+  const [ready, setReady] = useState(false);
+  const [loadError, setLoadError] = useState(null);
+  const listsRef = useRef(lists);
+  listsRef.current = lists;
+  const loadSeq = useRef(0);
+
+  const loadAll = useCallback(async () => {
+    const seq = ++loadSeq.current;
+    setLoadError(null);
     try {
-      window.localStorage.setItem(
-        STORAGE_KEY,
-        JSON.stringify({ taskStatuses, priorities, projectStatuses, labels, departments, jobTitles })
-      );
-    } catch {
-      // ignore — data just won't persist this session
+      const results = await Promise.all(TYPES.map((t) => api.get(`/master-data/${t}`)));
+      if (seq !== loadSeq.current) return;
+      const next = {};
+      TYPES.forEach((t, i) => {
+        next[t] = results[i].map(normalizeItem);
+      });
+      setLists(next);
+      setReady(true);
+    } catch (err) {
+      if (seq !== loadSeq.current) return;
+      setLoadError(err.message);
     }
-  }, [taskStatuses, priorities, projectStatuses, labels, departments, jobTitles]);
+  }, []);
 
-  const listMap = {
-    taskStatuses: [taskStatuses, setTaskStatuses],
-    priorities: [priorities, setPriorities],
-    projectStatuses: [projectStatuses, setProjectStatuses],
-    labels: [labels, setLabels],
-    departments: [departments, setDepartments],
-    jobTitles: [jobTitles, setJobTitles],
+  const userId = user?.id;
+  useEffect(() => {
+    if (!userId) {
+      loadSeq.current += 1;
+      setReady(false);
+      setLoadError(null);
+      return;
+    }
+    setReady(false);
+    loadAll();
+  }, [userId, loadAll]);
+
+  const setList = (listName, fn) => setLists((prev) => ({ ...prev, [listName]: fn(prev[listName]) }));
+
+  const guard = async (fn) => {
+    try {
+      return await fn();
+    } catch (err) {
+      toast(err.message || "Terjadi kesalahan.");
+      return null;
+    }
   };
 
-  const addItem = (listName, data) => {
-    const [, setList] = listMap[listName];
-    const item = { id: Date.now(), ...data };
-    if (listName === "taskStatuses") item.key = slugify(data.name);
-    setList((prev) => [...prev, item]);
-    return item;
+  const bodyFor = (listName, data) => {
+    const body = { name: data.name };
+    if (["taskStatuses", "priorities", "projectStatuses", "labels"].includes(listName)) body.color = data.color;
+    if (listName === "departments") body.description = data.description || null;
+    return body;
   };
 
-  const updateItem = (listName, id, patch) => {
-    const [, setList] = listMap[listName];
-    // `key` is immutable once a task status exists, to avoid orphaning tasks.
-    const safePatch = listName === "taskStatuses" ? { ...patch, key: undefined } : patch;
-    setList((prev) => prev.map((item) => (item.id === id ? { ...item, ...safePatch, key: item.key ?? safePatch.key } : item)));
-  };
+  // Each returns the saved item (or `true`) on success, `null` after an error toast.
+  const addItem = (listName, data) =>
+    guard(async () => {
+      const created = normalizeItem(await api.post(`/master-data/${listName}`, bodyFor(listName, data)));
+      setList(listName, (prev) => (ORDERED.includes(listName) ? [...prev, created] : [...prev, created].sort(byName)));
+      return created;
+    });
 
-  const deleteItem = (listName, id) => {
-    const [, setList] = listMap[listName];
-    setList((prev) => prev.filter((item) => item.id !== id));
-  };
+  const updateItem = (listName, id, patch) =>
+    guard(async () => {
+      const body = {};
+      const full = bodyFor(listName, { ...listsRef.current[listName].find((i) => i.id === id), ...patch });
+      Object.assign(body, full);
+      const saved = normalizeItem(await api.put(`/master-data/${listName}/${id}`, body));
+      setList(listName, (prev) => {
+        const next = prev.map((item) => (item.id === id ? saved : item));
+        return ORDERED.includes(listName) ? next : next.sort(byName);
+      });
+      return saved;
+    });
 
-  const moveItem = (listName, id, direction) => {
-    const [list, setList] = listMap[listName];
+  const deleteItem = (listName, id) =>
+    guard(async () => {
+      await api.delete(`/master-data/${listName}/${id}`);
+      setList(listName, (prev) => prev.filter((item) => item.id !== id));
+      return true;
+    });
+
+  const moveItem = async (listName, id, direction) => {
+    const list = listsRef.current[listName];
     const idx = list.findIndex((i) => i.id === id);
     const swapWith = idx + direction;
-    if (idx < 0 || swapWith < 0 || swapWith >= list.length) return;
+    if (idx < 0 || swapWith < 0 || swapWith >= list.length) return null;
+
+    // Optimistic reorder, then persist; re-sync from the server if it fails.
     const next = [...list];
     [next[idx], next[swapWith]] = [next[swapWith], next[idx]];
-    setList(next);
+    setList(listName, () => next);
+    try {
+      await api.post(`/master-data/${listName}/${id}/move`, { direction });
+      return true;
+    } catch (err) {
+      toast(err.message || "Gagal mengubah urutan.");
+      loadAll();
+      return null;
+    }
   };
 
   /* ---- lookup helpers used throughout the app for colors/labels ---- */
+  const { taskStatuses, priorities, projectStatuses, labels, departments, jobTitles } = lists;
   const priorityColor = (name) => priorities.find((p) => p.name === name)?.color || BRAND.muted;
   const projectStatusColor = (name) => projectStatuses.find((s) => s.name === name)?.color || BRAND.muted;
   const taskStatusColor = (key) => taskStatuses.find((s) => s.key === key)?.color || BRAND.muted;
@@ -137,6 +144,9 @@ export function MasterDataProvider({ children }) {
   const labelColor = (name) => labels.find((l) => l.name === name)?.color || BRAND.muted;
 
   const value = {
+    ready,
+    loadError,
+    reload: loadAll,
     taskStatuses,
     priorities,
     projectStatuses,

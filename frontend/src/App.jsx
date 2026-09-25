@@ -1,6 +1,7 @@
 import React from "react";
 import { Routes, Route } from "react-router-dom";
 import { ThemeProvider } from "./hooks/useTheme";
+import { ToastProvider } from "./hooks/useToast";
 import { TasksProvider } from "./hooks/useTasksStore";
 import { MasterDataProvider } from "./hooks/useMasterData";
 import { AuthProvider } from "./hooks/useAuth";
@@ -21,9 +22,11 @@ import Settings from "./pages/Settings";
 export default function App() {
   return (
     <ThemeProvider>
-      <MasterDataProvider>
-        <TasksProvider>
-          <AuthProvider>
+      <ToastProvider>
+        {/* Auth is outermost: data is only fetched from the API once a user is logged in. */}
+        <AuthProvider>
+          <MasterDataProvider>
+            <TasksProvider>
             <Routes>
               <Route path="/login" element={<Login />} />
               <Route
@@ -45,9 +48,10 @@ export default function App() {
                 <Route path="/settings" element={<Settings />} />
               </Route>
             </Routes>
-          </AuthProvider>
-        </TasksProvider>
-      </MasterDataProvider>
+            </TasksProvider>
+          </MasterDataProvider>
+        </AuthProvider>
+      </ToastProvider>
     </ThemeProvider>
   );
 }
