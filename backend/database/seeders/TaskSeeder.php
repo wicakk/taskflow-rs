@@ -37,7 +37,6 @@ class TaskSeeder extends Seeder
                 'status' => $t['status'],
                 'priority' => $t['priority'],
                 'due_date' => $t['due'],
-                'comments_count' => $t['comments'],
                 'attachments_count' => $t['attachments'],
             ]);
 
@@ -46,6 +45,15 @@ class TaskSeeder extends Seeder
 
             $labelIds = collect($t['labels'])->map(fn ($name) => MasterLabel::where('name', $name)->value('id'))->filter()->all();
             $task->labels()->sync($labelIds);
+
+            // Seed a couple of real comments (from the assignee) so the demo
+            // data isn't empty — 'comments' in $t is now just "how many to seed".
+            for ($i = 0; $i < min($t['comments'], 3); $i++) {
+                $task->comments()->create([
+                    'author_id' => $assigneeIds[0] ?? 1,
+                    'text' => 'Update progres #'.($i + 1).' untuk "'.$t['title'].'".',
+                ]);
+            }
 
             foreach ($t['checklist'] as $order => [$text, $done]) {
                 $task->checklistItems()->create(['text' => $text, 'done' => $done, 'order' => $order]);

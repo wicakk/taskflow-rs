@@ -88,6 +88,21 @@ curl http://localhost:8000/api/projects \
 | `bootstrap/app.php` | Ditambah routing `api: routes/api.php` + alias middleware `permission` |
 | `.env.example` | Default ke MySQL (bukan SQLite), session/cache pakai `file` (bukan `database`, jadi tidak perlu tabel sessions/cache aktif), queue `sync`, + `FRONTEND_URL` |
 
+## 4b. Migrasi terbaru — perlu `migrate:fresh`
+
+Beberapa migrasi ditambahkan setelah versi awal untuk membuang kolom statis dan menambah fitur
+komentar task:
+
+| Migrasi | Untuk apa |
+|---|---|
+| `..._create_task_comments_table` | Tabel komentar task yang sungguhan (dulu tombol "Send" di UI tidak menyimpan apa pun) |
+| `..._drop_comments_count_from_tasks_table` | Jumlah komentar sekarang dihitung langsung dari `task_comments`, bukan angka tetap |
+| `..._drop_static_stats_from_users_table` | Membuang `active_tasks`, `completed_tasks`, `workload` — sekarang dihitung di frontend dari task yang sebenarnya |
+| `..._add_last_seen_at_to_users_table` + `..._drop_static_online_from_users_table` | Status online sekarang dari `last_seen_at` (diperbarui oleh `App\Http\Middleware\TouchLastSeen` di setiap request terautentikasi + heartbeat 60 detik dari frontend), bukan flag tetap |
+
+Karena ada kolom yang dihapus, jalankan `php artisan migrate:fresh --seed` (bukan `migrate` biasa)
+setelah menarik perubahan ini — ini akan **menghapus semua data** dan membuatnya ulang dari seeder.
+
 ## 5. Referensi API
 
 Semua endpoint (kecuali `/login`) butuh header `Authorization: Bearer {token}`.
@@ -160,6 +175,14 @@ Frontend (`../frontend`) sudah memakai API ini untuk semua CRUD: token dari `POS
 disimpan di browser dan dikirim sebagai `Authorization: Bearer {token}` di setiap request.
 Resource class di backend ini mengembalikan camelCase dengan struktur yang sama seperti yang
 dipakai UI, dan responsnya dibungkus `{ "data": ... }` (frontend membukanya di `src/api.js`).
+
+## 6b. Endpoint komentar task (baru)
+
+| Method | Endpoint | Keterangan |
+|---|---|---|
+| GET | `/api/tasks/{task}/comments` | Daftar komentar sebuah task |
+| POST | `/api/tasks/{task}/comments` | Tambah komentar (`{ "text": "..." }`) — siapa saja yang login boleh, sama seperti chat project |
+| DELETE | `/api/task-comments/{taskComment}` | Hapus komentar — hanya penulisnya sendiri atau admin |
 
 ## 7. Troubleshooting
 

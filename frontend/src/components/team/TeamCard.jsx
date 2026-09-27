@@ -52,12 +52,21 @@ export default function TeamCard({ member, onEdit, onDelete }) {
           <div className="text-[11px]" style={{ color: c.muted }}>Completed</div>
         </div>
       </div>
-      <div>
-        <div className="flex justify-between text-[11.5px] mb-1.5" style={{ color: c.muted }}>
-          <span>Workload</span>
-          <span style={{ color: c.textStrong, fontWeight: 600 }}>{member.workload}%</span>
+      <div className="space-y-3">
+        <div>
+          <div className="flex justify-between text-[11.5px] mb-1.5" style={{ color: c.muted }}>
+            <span>Complete</span>
+            <span style={{ color: c.textStrong, fontWeight: 600 }}>{member.completedPct}%</span>
+          </div>
+          <ProgressBar value={member.completedPct} color={BRAND.success} />
         </div>
-        <ProgressBar value={member.workload} color={member.workload > 65 ? BRAND.danger : BRAND.primary} />
+        <div>
+          <div className="flex justify-between text-[11.5px] mb-1.5" style={{ color: c.muted }}>
+            <span>Sedang berjalan</span>
+            <span style={{ color: c.textStrong, fontWeight: 600 }}>{member.activePct}%</span>
+          </div>
+          <ProgressBar value={member.activePct} color={BRAND.primary} />
+        </div>
       </div>
     </Card>
   );

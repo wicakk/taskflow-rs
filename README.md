@@ -8,6 +8,27 @@ taskflow/
 └── backend/    Laravel 12 + MySQL (REST API)
 ```
 
+## Update terbaru: menghapus sisa data statis
+
+Selain menyambungkan CRUD ke database, beberapa nilai yang ternyata masih statis (tidak pernah
+berubah walau data diubah) sudah dibuat dinamis:
+
+- **Statistik anggota tim** (task aktif/selesai, workload, status online) — dulu kolom tetap di
+  tabel `users` yang tidak pernah dihitung ulang, sekarang dihitung langsung dari task yang
+  sungguhan ada + presence asli (`last_seen_at`, diperbarui tiap ada request/heartbeat).
+- **Komentar di Task Detail** — dulu tombol "Send" cuma mengosongkan input tanpa menyimpan apa
+  pun. Sekarang komentar tersimpan di tabel `task_comments` yang baru.
+- **Tanggal "hari ini"** di frontend dulu dikunci ke tanggal contoh (`2026-09-06`), sekarang
+  memakai tanggal asli — mempengaruhi highlight di Calendar dan hitungan overdue di Reports.
+
+**Karena ada migrasi baru (kolom dihapus/ditambah), database perlu di-reset ulang:**
+```
+cd backend
+php artisan migrate:fresh --seed
+```
+`migrate:fresh` akan **menghapus semua data** di database `taskflow` lalu membuatnya lagi dari
+migrasi + seeder. Kalau sudah ada data penting yang ingin dipertahankan, backup dulu.
+
 ## Status koneksi FE ↔ BE: sudah terhubung
 
 Frontend sekarang mengambil dan menyimpan **semua** data lewat REST API Laravel, sehingga

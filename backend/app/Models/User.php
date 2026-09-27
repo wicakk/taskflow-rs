@@ -14,7 +14,6 @@ class User extends Authenticatable
 
     protected $fillable = [
         'name', 'email', 'password', 'initials', 'role', 'access_role',
-        'online', 'active_tasks', 'completed_tasks', 'workload',
     ];
 
     protected $hidden = ['password', 'remember_token'];
@@ -22,7 +21,7 @@ class User extends Authenticatable
     protected function casts(): array
     {
         return [
-            'online' => 'boolean',
+            'last_seen_at' => 'datetime',
         ];
     }
 

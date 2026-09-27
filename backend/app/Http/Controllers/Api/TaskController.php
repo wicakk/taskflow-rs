@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
+use App\Http\Resources\TaskCommentResource;
 use App\Http\Resources\TaskResource;
 use App\Models\MasterLabel;
 use App\Models\Task;
@@ -12,7 +13,7 @@ class TaskController extends Controller
 {
     public function index(Request $request)
     {
-        $query = Task::with(['labels', 'checklistItems', 'assignees']);
+        $query = Task::with(['labels', 'checklistItems', 'assignees'])->withCount('comments');
 
         if ($request->filled('project_id')) {
             $query->where('project_id', $request->input('project_id'));
@@ -26,7 +27,7 @@ class TaskController extends Controller
 
     public function show(Task $task)
     {
-        return new TaskResource($task->load(['labels', 'checklistItems', 'assignees']));
+        return new TaskResource($task->load(['labels', 'checklistItems', 'assignees', 'comments.author']));
     }
 
     public function store(Request $request)
@@ -58,8 +59,8 @@ class TaskController extends Controller
         $task->assignees()->sync($data['assignees'] ?? []);
         $this->syncLabels($task, $data['labels'] ?? []);
 
-        // refresh() so DB defaults (comments_count, attachments_count) and
-        // casted types (project_id as int) are present in the response.
+        // refresh() so DB defaults (attachments_count) and casted types
+        // (project_id as int) are present in the response.
         return new TaskResource($task->refresh()->load(['labels', 'checklistItems', 'assignees']));
     }
 
@@ -93,6 +94,11 @@ class TaskController extends Controller
         }
 
         return new TaskResource($task->load(['labels', 'checklistItems', 'assignees']));
+    }
+
+    public function comments(Task $task)
+    {
+        return TaskCommentResource::collection($task->comments()->with('author')->get());
     }
 
     public function destroy(Request $request, Task $task)

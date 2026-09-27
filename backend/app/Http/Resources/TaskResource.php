@@ -4,6 +4,7 @@ namespace App\Http\Resources;
 
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\JsonResource;
+use App\Http\Resources\TaskCommentResource;
 
 class TaskResource extends JsonResource
 {
@@ -18,7 +19,9 @@ class TaskResource extends JsonResource
             'priority' => $this->priority,
             'assignees' => $this->whenLoaded('assignees', fn () => $this->assignees->pluck('id')),
             'dueDate' => optional($this->due_date)->toDateString(),
-            'comments' => $this->comments_count,
+            // Real, live count — not a static counter — so it always matches the
+            // comments actually stored for this task.
+            'comments' => $this->whenLoaded('comments', fn () => $this->comments->count(), $this->comments()->count()),
             'attachments' => $this->attachments_count,
             'labels' => $this->whenLoaded('labels', fn () => $this->labels->pluck('name')),
             'checklist' => $this->whenLoaded('checklistItems', fn () => $this->checklistItems->map(fn ($item) => [
@@ -26,6 +29,7 @@ class TaskResource extends JsonResource
                 'text' => $item->text,
                 'done' => (bool) $item->done,
             ])),
+            'commentList' => $this->whenLoaded('comments', fn () => TaskCommentResource::collection($this->comments)),
         ];
     }
 }

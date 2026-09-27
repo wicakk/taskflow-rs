@@ -7,7 +7,7 @@ import { useTheme } from "../../hooks/useTheme";
 import { useAuth } from "../../hooks/useAuth";
 import { useTasksStore } from "../../hooks/useTasksStore";
 import { useMasterData } from "../../hooks/useMasterData";
-import { membersByIds } from "../../data/mockData";
+import { membersByIds, timeAgo } from "../../data/mockData";
 import Avatar from "../common/Avatar";
 import Badge from "../common/Badge";
 import ProgressBar from "../common/ProgressBar";
@@ -23,7 +23,9 @@ export default function TaskDetail({ task, project, onClose }) {
   const {
     teamMembers, updateTask, updateTaskStatus, deleteTask,
     toggleChecklistItem, addChecklistItem, removeChecklistItem,
+    loadTaskComments, sendTaskComment, deleteTaskComment,
   } = useTasksStore();
+  const { user } = useAuth();
   const { taskStatuses, priorities, labels, priorityColor, labelColor } = useMasterData();
 
   const [editing, setEditing] = useState(false);
@@ -31,12 +33,29 @@ export default function TaskDetail({ task, project, onClose }) {
   const [newItem, setNewItem] = useState("");
   const [confirmDelete, setConfirmDelete] = useState(false);
   const [comment, setComment] = useState("");
+  const [sendingComment, setSendingComment] = useState(false);
   const [show, setShow] = useState(false);
 
   useEffect(() => {
     const raf = requestAnimationFrame(() => setShow(true));
     return () => cancelAnimationFrame(raf);
   }, []);
+
+  // Comments live in the database (task_comments) — load the real list for
+  // this task instead of only trusting the count that came with the task.
+  useEffect(() => {
+    loadTaskComments(task.id);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [task.id]);
+
+  const submitComment = async () => {
+    const text = comment.trim();
+    if (!text || sendingComment) return;
+    setSendingComment(true);
+    const sent = await sendTaskComment(task.id, text);
+    setSendingComment(false);
+    if (sent) setComment(""); // on failure keep the draft so nothing is lost
+  };
 
   const assigneeMembers = membersByIds(teamMembers, task.assignees);
   const checkedCount = task.checklist.filter((x) => x.done).length;
@@ -296,17 +315,48 @@ export default function TaskDetail({ task, project, onClose }) {
               <span className="flex items-center gap-1"><MessageSquare size={13} />{task.comments} comments</span>
             </div>
 
+            {(task.commentList || []).length > 0 && (
+              <div className="space-y-3">
+                {task.commentList.map((cm) => {
+                  const author = teamMembers.find((m) => m.id === cm.authorId);
+                  const mine = cm.authorId === user?.id;
+                  return (
+                    <div key={cm.id} className="flex items-start gap-2">
+                      <Avatar initials={author?.initials || "?"} size={26} />
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-baseline gap-2">
+                          <span className="text-[12.5px] font-medium" style={{ color: c.textStrong }}>{author?.name || "Unknown"}</span>
+                          <span className="text-[10.5px]" style={{ color: c.muted }}>{timeAgo(cm.timestamp)}</span>
+                        </div>
+                        <p className="text-[12.5px] mt-0.5 break-words" style={{ color: c.text }}>{cm.text}</p>
+                      </div>
+                      {(mine || user?.accessRole === "admin") && (
+                        <button
+                          onClick={() => deleteTaskComment(task.id, cm.id)}
+                          className="p-1 rounded-md shrink-0"
+                          style={{ color: c.muted }}
+                        >
+                          <Trash2 size={12} />
+                        </button>
+                      )}
+                    </div>
+                  );
+                })}
+              </div>
+            )}
+
             <div>
               <div className="text-[11px] mb-2" style={{ color: c.muted }}>Add comment</div>
               <div className="flex gap-2">
                 <input
                   value={comment}
                   onChange={(e) => setComment(e.target.value)}
+                  onKeyDown={(e) => e.key === "Enter" && submitComment()}
                   placeholder="Write a comment..."
                   className="flex-1 rounded-[10px] px-3 py-2 text-[13px] outline-none"
                   style={{ background: c.bg, border: `1px solid ${c.border}`, color: c.text }}
                 />
-                <Button onClick={() => setComment("")}>Send</Button>
+                <Button onClick={submitComment} disabled={sendingComment}>{sendingComment ? "..." : "Send"}</Button>
               </div>
             </div>
           </div>

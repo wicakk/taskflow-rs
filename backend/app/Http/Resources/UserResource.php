@@ -16,10 +16,10 @@ class UserResource extends JsonResource
             'initials' => $this->initials,
             'role' => $this->role,
             'accessRole' => $this->access_role,
-            'online' => (bool) $this->online,
-            'activeTasks' => $this->active_tasks,
-            'completedTasks' => $this->completed_tasks,
-            'workload' => $this->workload,
+            // Real presence: active within the last 2 minutes — not a static
+            // seeded flag. Updated by App\Http\Middleware\TouchLastSeen on every
+            // authenticated request, plus a periodic heartbeat from the frontend.
+            'online' => $this->last_seen_at?->gt(now()->subMinutes(2)) ?? false,
         ];
     }
 }

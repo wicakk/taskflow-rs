@@ -14,7 +14,7 @@ class Task extends Model
 
     protected $fillable = [
         'project_id', 'title', 'description', 'status', 'priority',
-        'due_date', 'comments_count', 'attachments_count',
+        'due_date', 'attachments_count',
     ];
 
     protected function casts(): array
@@ -43,5 +43,10 @@ class Task extends Model
     public function labels(): BelongsToMany
     {
         return $this->belongsToMany(MasterLabel::class, 'master_label_task');
+    }
+
+    public function comments(): HasMany
+    {
+        return $this->hasMany(TaskComment::class)->orderBy('created_at');
     }
 }

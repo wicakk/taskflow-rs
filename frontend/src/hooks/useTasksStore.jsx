@@ -57,6 +57,8 @@ const normalizeMember = (u) => ({ ...u, id: Number(u.id), role: u.role ?? "" });
 
 const normalizeChat = (m) => ({ ...m, id: Number(m.id), projectId: Number(m.projectId), authorId: Number(m.authorId) });
 
+const normalizeComment = (c) => ({ ...c, id: Number(c.id), taskId: Number(c.taskId), authorId: Number(c.authorId) });
+
 const normalizeAnnouncement = (a) => ({ ...a, id: Number(a.id), authorId: Number(a.authorId), pinned: !!a.pinned });
 
 const byName = (a, b) => a.name.localeCompare(b.name);
@@ -242,6 +244,42 @@ export function TasksProvider({ children }) {
   const closeTask = () => setActiveTaskId(null);
   const activeTask = useMemo(() => tasks.find((t) => t.id === activeTaskId) || null, [tasks, activeTaskId]);
 
+  /* ---------------- task comments ---------------- */
+  // Kept per-task in `commentList` on the task itself (fetched on demand, since
+  // the list endpoint only returns the live count to keep payloads small).
+  const loadTaskComments = useCallback(async (taskId) => {
+    try {
+      const list = (await api.get(`/tasks/${taskId}/comments`)).map(normalizeComment);
+      setTasks((prev) => prev.map((t) => (t.id === taskId ? { ...t, commentList: list, comments: list.length } : t)));
+    } catch {
+      /* ignore — the comment panel just stays empty/stale */
+    }
+  }, []);
+
+  const sendTaskComment = (taskId, text) =>
+    guard(async () => {
+      const created = normalizeComment(await api.post(`/tasks/${taskId}/comments`, { text }));
+      setTasks((prev) =>
+        prev.map((t) =>
+          t.id === taskId ? { ...t, commentList: [...(t.commentList || []), created], comments: (t.comments || 0) + 1 } : t
+        )
+      );
+      return created;
+    });
+
+  const deleteTaskComment = (taskId, commentId) =>
+    guard(async () => {
+      await api.delete(`/task-comments/${commentId}`);
+      setTasks((prev) =>
+        prev.map((t) =>
+          t.id === taskId
+            ? { ...t, commentList: (t.commentList || []).filter((c) => c.id !== commentId), comments: Math.max(0, (t.comments || 1) - 1) }
+            : t
+        )
+      );
+      return true;
+    });
+
   /* ---------------- projects ---------------- */
   const projectBody = (data) => {
     const body = pick(data, PROJECT_FIELDS);
@@ -389,6 +427,9 @@ export function TasksProvider({ children }) {
     toggleChecklistItem,
     addChecklistItem,
     removeChecklistItem,
+    loadTaskComments,
+    sendTaskComment,
+    deleteTaskComment,
     addProject,
     updateProject,
     deleteProject,

@@ -15,6 +15,7 @@ return Application::configure(basePath: dirname(__DIR__))
         $middleware->alias([
             'permission' => \App\Http\Middleware\EnsurePermission::class,
         ]);
+        $middleware->appendToGroup('api', \App\Http\Middleware\TouchLastSeen::class);
     })
     ->withExceptions(function (Exceptions $exceptions): void {
         //

@@ -6,12 +6,13 @@ use App\Http\Controllers\Api\ChatController;
 use App\Http\Controllers\Api\ChecklistItemController;
 use App\Http\Controllers\Api\MasterDataController;
 use App\Http\Controllers\Api\ProjectController;
+use App\Http\Controllers\Api\TaskCommentController;
 use App\Http\Controllers\Api\TaskController;
 use App\Http\Controllers\Api\UserController;
 use Illuminate\Support\Facades\Route;
 
 // Public
-Route::post('/login', [AuthController::class, 'login']);
+Route::post('/login', [AuthController::class, 'login'])->middleware('throttle:login');
 
 // Authenticated (Bearer token via Sanctum)
 Route::middleware('auth:sanctum')->group(function () {
@@ -20,6 +21,9 @@ Route::middleware('auth:sanctum')->group(function () {
 
     Route::apiResource('projects', ProjectController::class);
     Route::apiResource('tasks', TaskController::class);
+    Route::get('/tasks/{task}/comments', [TaskController::class, 'comments']);
+    Route::post('/tasks/{task}/comments', [TaskCommentController::class, 'store']);
+    Route::delete('/task-comments/{taskComment}', [TaskCommentController::class, 'destroy']);
     Route::post('/tasks/{task}/checklist', [ChecklistItemController::class, 'store']);
     Route::put('/checklist/{checklistItem}', [ChecklistItemController::class, 'update']);
     Route::delete('/checklist/{checklistItem}', [ChecklistItemController::class, 'destroy']);

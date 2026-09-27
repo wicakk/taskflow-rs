@@ -86,7 +86,9 @@ berbeda dari yang di atas.
   
   Semua form (New Project, New Task, Add Member) dan tampilan (Kanban, badge status/priority, Reports) otomatis mengikuti data dari Master Data ini — bukan lagi hardcode. Item yang masih dipakai (ditandai "used by N task/project") tidak bisa dihapus untuk mencegah data rusak.
 - **Semua form tampil sebagai drawer dari samping kanan** (New Project, New Task, Add Member, New Announcement) — bukan popup di tengah, konsisten dengan drawer Task Detail, lengkap dengan animasi slide.
-- **Data tersimpan di database** — semua perubahan (task, project, chat, pengumuman, anggota tim, dan Master Data) dikirim ke REST API Laravel dan tersimpan di MySQL, jadi konsisten di semua perangkat dan tetap ada setelah reload. Halaman Settings punya tombol *Muat ulang data* untuk mengambil data terbaru dari server.
+- **Data tersimpan di database** — semua perubahan (task, project, chat, pengumuman, anggota tim, komentar task, dan Master Data) dikirim ke REST API Laravel dan tersimpan di MySQL, jadi konsisten di semua perangkat dan tetap ada setelah reload. Halaman Settings punya tombol *Muat ulang data* untuk mengambil data terbaru dari server.
+- **Statistik tim yang benar-benar hidup** — task aktif/selesai dan workload di halaman Team dihitung langsung dari task yang sungguhan ada (lihat `src/utils/memberStats.js`), bukan angka tetap. Status online juga nyata: ikut aktivitas terakhir (`last_seen_at`), bukan flag yang selalu sama.
+- **Komentar task nyata** — komentar di Task Detail tersimpan di database (bisa dilihat lagi setelah reload, dan dihapus oleh penulisnya atau admin).
 - Calendar — month view dengan deadline per tanggal
 - Team — **tambah/edit/hapus anggota** beserta role akses (khusus Admin)
 - Dark mode penuh lewat `ThemeProvider` + `useTheme()`

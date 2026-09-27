@@ -22,6 +22,18 @@ export function AuthProvider({ children }) {
     return () => setUnauthorizedHandler(null);
   }, [dropSession]);
 
+  // Heartbeat: any authenticated GET touches last_seen_at server-side (see
+  // App\Http\Middleware\TouchLastSeen), which drives the real "online" badge.
+  // Without this, someone who is just reading the board (no other requests
+  // firing) would silently drop to "offline" after ~2 minutes.
+  useEffect(() => {
+    if (!user) return undefined;
+    const timer = setInterval(() => {
+      api.get("/me").catch(() => {}); // best-effort; failures are handled by other calls
+    }, 60000);
+    return () => clearInterval(timer);
+  }, [user]);
+
   useEffect(() => {
     if (!getToken()) return undefined;
     let cancelled = false;
